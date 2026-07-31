@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Báo Cáo & Nhận Xét Học Sinh - Chuẩn Sư Phạm</title>
+    <!-- Thư viện xuất Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.6; }
+        .container { max-width: 950px; margin: 0 auto; }
+        
+        h1 { text-align: center; color: var(--primary); margin-bottom: 20px; font-size: 24px; text-transform: uppercase; }
+        
+        .card { background: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; border: 1px solid var(--border); }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid #dbeafe; padding-bottom: 6px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+        
+        .mode-selector { background: #eff6ff; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 20px; }
+        .mode-selector label { font-size: 15px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        label { font-size: 13px; font-weight: 700; color: #475569; }
+        input, select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+
+        .time-group { display: flex; gap: 8px; }
+        .time-group select { flex: 1; }
+        .time-group input { flex: 1; }
+
+        .student-checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-top: 8px; }
+        .student-checkbox-item { background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none; }
+        .student-checkbox-item input { width: 16px; height: 16px; cursor: pointer; }
+
+        .student-row-card { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px; }
+        
+        .tags-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+        .tag-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .tag-btn:hover { background: #e2e8f0; }
+        .tag-btn input[type="checkbox"] { display: none; }
+        
+        .tag-btn:has(input:checked) {
+            background: #e11d48;
+            color: white;
+            border-color: #be123c;
+        }
+        .tag-btn:has(input[value="hang_hai"]:checked),
+        .tag-btn:has(input[value="lam_bai_nhanh"]:checked) {
+            background: #059669;
+            color: white;
+            border-color: #047857;
+        }
+
+        .btn { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-add { background: #10b981; color: white; }
+        .btn-add:hover { background: #059669; }
+        .btn-danger { background: #ef4444; color: white; padding: 10px; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-copy { background: #8b5cf6; color: white; margin-right: 10px; }
+        .btn-export { background: #0284c7; color: white; }
+
+        .output-box { background: #f1f5f9; padding: 20px; border-radius: 8px; white-space: pre-wrap; font-size: 14px; border: 1px solid var(--border); font-family: inherit; line-height: 1.7; }
+        .actions { display: flex; justify-content: flex-end; margin-top: 15px; }
+
+        .checkpoint-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 5px;
+            display: none;
+        }
+        .checkpoint-active-notice {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #14532d;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* STYLES CHO MODAL QUẢN LÝ LỚP & HỌC SINH */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; border-radius: 10px; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-header h3 { color: var(--primary); font-size: 18px; }
+        .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; font-weight: bold; }
+        .manage-section { border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f8fafc; }
+        .manage-section-title { font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #334155; }
+        .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .student-item-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .student-chip { background: white; border: 1px solid var(--border); padding: 4px 10px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .student-chip span { cursor: pointer; color: #ef4444; font-weight: bold; }
+        .class-list-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .class-list-table th, .class-list-table td { border: 1px solid var(--border); padding: 8px; font-size: 13px; text-align: left; }
+        .class-list-table th { background: #e2e8f0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>HỆ THỐNG XUẤT BÁO CÁO & NHẬN XẾT HỌC SINH TỰ ĐỘNG</h1>
+
+    <!-- BỘ CHỌN CHẾ ĐỘ -->
+    <div class="card">
+        <div class="card-title">Lựa Chọn Thể Loại Lớp Học</div>
+        <div class="mode-selector">
+            <label>
+                <input type="radio" name="mode" value="coding" checked onchange="onModeChange()"> 💻 <b>Coding</b> (Xưng Thầy - Em, định dạng 🌼)
+            </label>
+            <label>
+                <input type="radio" name="mode" value="robot" onchange="onModeChange()"> 🤖 <b>Robot</b> (Xưng Thầy - Bạn, định dạng 🔹)
+            </label>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <span>1. Thông tin chung & Chọn danh sách lớp</span>
+            <button class="btn btn-add btn-sm" onclick="openClassModal()">⚙️ Quản Lý Danh Sách Lớp</button>
+        </div>
+        <div class="grid-3">
+            <div class="form-group">
+                <label>Ngày học:</label>
+                <input type="date" id="lessonDate">
+            </div>
+            <div class="form-group">
+                <label>Chọn Lớp Học:</label>
+                <select id="classSelect" onchange="onClassChange()">
+                    <!-- JS tự động lọc theo Coding/Robot -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Sĩ số (Tính tự động):</label>
+                <input type="text" id="attendance" placeholder="VD: 6/6" readonly style="background: #e2e8f0;">
+            </div>
+        </div>
+
+        <!-- KHU VỰC ĐIỂM DANH HỌC VIÊN -->
+        <div id="attendanceArea" style="display: none; margin-bottom: 15px;">
+            <label>Tích chọn các học viên có mặt trong buổi học:</label>
+            <div id="studentCheckboxContainer" class="student-checkbox-grid"></div>
+        </div>
+
+        <div class="grid-4">
+            <div class="form-group">
+                <label>Buổi học (1 - 14):</label>
+                <select id="lessonNoSelect" onchange="onLessonNoChange()">
+                    <!-- Options JS cập nhật -->
+                </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Tên bài học / Chủ đề:</label>
+                <input type="text" id="lessonTitle" placeholder="VD: Sức mạnh công cụ Gamemaker 2.0">
+            </div>
+            <div class="form-group">
+                <label>Thời gian / Ca học:</label>
+                <div class="time-group">
+                    <select id="timeSelect" onchange="onTimeSelectChange()">
+                        <!-- JS tự động tạo 8h00 - 20h00 -->
+                    </select>
+                    <input type="text" id="customTime" placeholder="VD: 19h30 - 21h00" style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- THÔNG BÁO CHECKPOINT -->
+        <div id="checkpointWarning" class="checkpoint-notice">
+            🔔 <b>Thông báo tự động:</b> Buổi tới là bài kiểm tra Đánh giá năng lực (Checkpoint). Hệ thống sẽ tự động thêm lời nhắc ôn tập gửi tới phụ huynh.
+        </div>
+        <div id="checkpointActiveNotice" class="checkpoint-active-notice">
+            🎯 <b>CHẾ ĐỘ ĐÁNH GIÁ CHECKPOINT:</b> Hệ thống áp dụng ngân hàng nhận xét sư phạm tập trung vào Kiến thức, Thái độ và Khả năng tự lực làm bài.
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+            <label>Chi tiết nội dung buổi học (Mỗi ý 1 dòng):</label>
+            <textarea id="lessonContent" rows="4" placeholder="Nhập nội dung bài học..."></textarea>
+        </div>
+    </div>
+
+    <!-- 2. DANH SÁCH HỌC SINH -->
+    <div class="card">
+        <div class="card-title">2. Nhận xét học viên</div>
+        <div id="studentList">
+            <p id="emptyNotice" style="color: #64748b; font-style: italic; text-align: center; padding: 10px;">Vui lòng chọn lớp và tích chọn học viên đi học ở mục 1.</p>
+        </div>
+        <button class="btn btn-add" onclick="addCustomStudent('')">+ Thêm học viên ngoài danh sách</button>
+    </div>
+
+    <button class="btn btn-primary" style="width: 100%; font-size: 16px; padding: 12px;" onclick="generateReport()">TẠO BÁO CÁO HOÀN CHỈNH</button>
+
+    <!-- 3. KẾT QUẢ XUẤT -->
+    <div class="card" id="resultCard" style="display: none; margin-top: 20px;">
+        <div class="card-title">3. Văn bản báo cáo hoàn chỉnh (Đã chuẩn hóa)</div>
+        <div class="output-box" id="reportOutput"></div>
+        <div class="actions">
+            <button class="btn btn-copy" onclick="copyReport()">Sao Chép Văn Bản</button>
+            <button class="btn btn-export" onclick="exportToExcel()">Xuất File Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL QUẢN LÝ TỰ ĐỘNG LỚP & HỌC SINH -->
+<div class="modal-overlay" id="classModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚙️ Quản Lý Lớp Học & Danh Sách Học Sinh</h3>
+            <button class="close-btn" onclick="closeClassModal()">✕</button>
+        </div>
+
+        <!-- 1. THÊM LỚP MỚI -->
+        <div class="manage-section">
+            <div class="manage-section-title">➕ Thêm Lớp Học Mới</div>
+            <div class="flex-row">
+                <input type="text" id="newClassName" placeholder="Tên Lớp (VD: GB01, CS101...)" style="flex: 2;">
+                <select id="newClassMode" style="flex: 1;">
+                    <option value="coding">💻 Coding</option>
+                    <option value="robot">🤖 Robot</option>
+                </select>
+                <button class="btn btn-add btn-sm" onclick="addNewClass()">Thêm Lớp</button>
+            </div>
+        </div>
+
+        <!-- 2. TRỰC TIẾP QL HỌC SINH CỦA CÁC LỚP -->
+        <div class="manage-section">
+            <div class="manage-section-title">👨‍🎓 Quản Lý Học Sinh Trong Lớp</div>
+            <div class="form-group">
+                <label>Chọn Lớp để sửa danh sách:</label>
+                <select id="manageClassSelect" onchange="renderManageStudentList()">
+                    <!-- JS load danh sách lớp -->
+                </select>
+            </div>
+            <div class="flex-row" style="margin-top: 10px;">
+                <input type="text" id="newStudentName" placeholder="Tên học sinh mới..." style="flex: 1;">
+                <button class="btn btn-add btn-sm" onclick="addStudentToClass()">Thêm Vào Lớp</button>
+            </div>
+            <div id="manageStudentContainer" class="student-item-list">
+                <!-- Hiển thị danh sách học sinh có nút Xóa -->
+            </div>
+        </div>
+
+        <!-- 3. BẢNG TỔNG QUAN VÀ XÓA LỚP -->
+        <div class="manage-section">
+            <div class="manage-section-title">📋 Danh Sách Lớp Đang Có & Xóa Lớp</div>
+            <table class="class-list-table">
+                <thead>
+                    <tr>
+                        <th>Tên Lớp</th>
+                        <th>Hệ</th>
+                        <th>Số Học Sinh</th>
+                        <th>Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody id="classListTableBody">
+                    <!-- JS load dữ liệu -->
+                </tbody>
+            </table>
+        </div>
+
+        <div style="text-align: right; margin-top: 15px;">
+            <button class="btn btn-primary" onclick="closeClassModal()">Hoàn Tất & Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('lessonDate').valueAsDate = new Date();
+
+    // KHỞI TẠO BỘ CHỌN GIỜ
+    function initTimeOptions() {
+        const timeSelect = document.getElementById('timeSelect');
+        timeSelect.innerHTML = '';
+        for (let h = 8; h <= 20; h++) {
+            let time00 = `${h}h00`;
+            timeSelect.add(new Option(time00, time00));
+            if (h < 20) {
+                let time30 = `${h}h30`;
+                timeSelect.add(new Option(time30, time30));
+            }
+        }
+        timeSelect.add(new Option("Khác...", "CUSTOM"));
+    }
+    initTimeOptions();
+
+    // DỮ LIỆU BAN ĐẦU (ĐÃ BỔ SUNG LỚP MẪU GB01)
+    const defaultClassList = {
+        "GB01": { mode: "coding", students: ["Đăng Khoa", "Thành Nam", "Bảo Minh", "Quang Huy"] },
+        "PREI11": { mode: "robot", students: ["Minh Long", "Hoài An", "Hoài Anh", "Văn Minh", "Đức Huy"] },
+        "PTB08": { mode: "coding", students: ["Hoàng Anh", "Gia An", "Đức An", "Sơn Tùng", "Nguyễn Hoàng", "Quang Minh", "Minh Quân"] },
+        "Nextgen": { mode: "coding", students: ["Danh Phong", "Minh Thư", "Nguyễn Hoàng", "Bảo Long", "Minh Hiền", "Bảo Anh", "Gia Bảo", "Sơn Tùng", "Đức An"] },
+        "GA21": { mode: "coding", students: ["Mạnh Dũng", "Thái Lâm", "Minh Vũ", "Quang Anh", "Huy Quân", "Đình Khuê", "Hoàng Minh"] },
+        "PTI05": { mode: "coding", students: ["Nam Anh", "Hồng Phúc"] }
+    };
+
+    let classList = JSON.parse(localStorage.getItem('sys_classList'));
+    if (!classList || Object.keys(classList).length === 0) {
+        classList = JSON.parse(JSON.stringify(defaultClassList));
+        saveClassList();
+    }
+
+    function saveClassList() {
+        localStorage.setItem('sys_classList', JSON.stringify(classList));
+    }
+
+    // SYLLABUS HỆ LỚP "GB" (Gamemaker 2.0)
+    const syllabusGB = {
+        1: { title: "Sức mạnh công cụ Gamemaker 2.0", content: "Tìm hiểu về công cụ sáng tạo trò chơi Gamemaker\nCác khái niệm cơ bản trong Gamemaker: sprite, object, event, action, room, background\nThực hành trải nghiệm lập trình trò chơi King Fish" },
+        2: { title: "Xây dựng logic game với Alarm", content: "Tìm hiểu khái niệm Frame per second (fps), tọa độ oxy trong Gamemaker\nGiới thiệu Alarm, comment trên câu lệnh\nThực hành các khái niệm trên trong game King Fish" },
+        3: { title: "Điều kiện va chạm, cá lớn ăn cá bé", content: "Tạo path và đặt alarm để sinh ra đàn cá liên tục\nTạo các phòng chơi và chuyển giữa các phòng" },
+        4: { title: "Điều kiện tiến hóa, trở thành vua cá", content: "Khái niệm biến số, cấu trúc điều kiện if else\nÁp dụng biến, if else lập trình tăng level cho nhân vật\nLập trình âm thanh cho game" },
+        5: { title: "Checkpoint 1", content: "Thực hành làm bài Checkpoint 1" },
+        6: { title: "Làm chủ bầu trời với animation", content: "Ôn tập lập trình di chuyển\nSử dụng tọa độ hướng để thay đổi hình ảnh nhân vật\nSử dụng timeline quyết định cách di chuyển của nhân vật phụ" },
+        7: { title: "Phân chia màn chơi, sải cánh cùng đồng đội", content: "Thêm các chức năng cho trò chơi với alarm, variable\nThêm kẻ địch và ôn tập path\nThêm các màn chơi cần thiết" },
+        8: { title: "Vượt qua thử thách với thuật toán", content: "Thêm các màn chơi\nThêm trí tuệ kẻ thù với timeline\nThêm âm thanh trò chơi" },
+        9: { title: "Checkpoint 2", content: "Thực hành làm bài Checkpoint 2" },
+        10: { title: "Thực hành hoàn thiện sản phẩm cuối khóa (Phần 1)", content: "Thực hiện lập trình cho dự án sản phẩm cuối khóa" },
+        11: { title: "Thực hành hoàn thiện sản phẩm cuối khóa (Phần 2)", content: "Thực hiện lập trình cho dự án sản phẩm cuối khóa" },
+        12: { title: "Thực hành hoàn thiện sản phẩm cuối khóa (Phần 3)", content: "Thực hiện lập trình cho dự án sản phẩm cuối khóa" },
+        13: { title: "Thực hành hoàn thiện sản phẩm cuối khóa (Phần 4)", content: "Thực hiện lập trình cho dự án sản phẩm cuối khóa" }
+    };
+
+    // SYLLABUS HỆ LỚP "GA"
+    const syllabusGA = {
+        1: { title: "Ngôn ngữ lập trình GML", content: "Thực hành lập trình mã lệnh cho hiệu ứng Parallax\nLàm quen với horizontal speed, vertical speed\nTìm hiểu về solid object" },
+        2: { title: "Mario Run", content: "Giới thiệu ngôn ngữ GML\nGiới thiệu biến số, biến môi trường, biến tự tạo\nÔn tập biến môi trường Gravity, horizontal speed, vertical speed" },
+        3: { title: "Làm quen với GML", content: "Sự quan trọng của vị trí gốc\nLàm quen với các hàm GML (instance_create, instance_destroy)\nTừ khóa other trong GML" },
+        4: { title: "Sound và button cho khởi hành, chạy và kết thúc", content: "Alarm trong GML\nGiới thiệu lập trình kế thừa\nGiới thiệu đối tượng global\nGiới thiệu các hàm và cách sử dụng (room_goto, audio_play_sound)" },
+        5: { title: "Checkpoint 1", content: "Thực hiện bài kiểm tra Đánh giá năng lực (Checkpoint 1)" },
+        6: { title: "Lập trình di chuyển với GML", content: "Tileset trong gamemaker\nLập trình di chuyển trong sự kiện step với code GML\nLập trình va chạm với code GML\nCác hàm trong bài: layer_tilemap_get_id(), keyboard_check(), ord(), place_meeting()" },
+        7: { title: "Camera và View Port", content: "Camera và viewport\nVận dụng lập trình kế thừa tối giản hóa lập trình\nLập trình tăng điểm số và thời gian" },
+        8: { title: "Hoàn thành game Dangerous Maze", content: "Khái niệm và cách sử dụng mảng\nThứ tự lấy giá trị của mảng (index)\nÔn tập lập trình kế thừa nút bấm" },
+        9: { title: "Checkpoint 2", content: "Thực hiện bài kiểm tra Đánh giá năng lực (Checkpoint 2)" },
+        10: { title: "Thực hiện sản phẩm cuối khóa (Phần 1)", content: "Thực hiện hoàn thiện và sửa lỗi sản phẩm cuối khóa\nHoàn thiện phần Canva thuyết trình" },
+        11: { title: "Thực hiện sản phẩm cuối khóa (Phần 2)", content: "Thực hiện hoàn thiện và sửa lỗi sản phẩm cuối khóa\nHoàn thiện phần Canva thuyết trình" },
+        12: { title: "Thực hiện sản phẩm cuối khóa (Phần 3)", content: "Thực hiện hoàn thiện và sửa lỗi sản phẩm cuối khóa\nHoàn thiện phần Canva thuyết trình" },
+        13: { title: "Thực hiện sản phẩm cuối khóa (Phần 4)", content: "Thực hiện hoàn thiện và sửa lỗi sản phẩm cuối khóa\nHoàn thiện phần Canva thuyết trình" }
+    };
+
+    // SYLLABUS HỆ LỚP "PREI"
+    const syllabusPREI = {
+        1: { title: "HỘI CHỢ VIỆC LÀM DÀNH CHO ROBOT", content: "Tìm hiểu công việc Robot có thể giúp đỡ con người trong các môi trường làm việc khác nhau như nhà máy, công trường, bệnh viện.\nDưới sự hướng dẫn của giáo viên, học viên lắp ráp mô hình theo mẫu có sử dụng 2 động cơ, cảm biến mắt, LED Bumper và nam châm điện.\nSử dụng các thẻ lệnh của học phần trước lập trình mô hình hoạt động." },
+        2: { title: "CẦN TRỤC THÔNG MINH", content: "Học viên tìm hiểu nguyên tắc hoạt động của cần trục.\nHọc viên lắp ráp mô hình cần trục thông minh trang bị 2 động cơ, cảm biến mắt, LED Bumper.\nSử dụng thẻ lệnh wait until, câu lệnh điều kiện if...else lập trình mô hình hoạt động." },
+        3: { title: "BÁNH RĂNG TRỢ LỰC", content: "Học viên tìm hiểu nguyên tắc bố trí bánh răng để tăng sức nâng hàng.\nLắp ráp mô hình xe nâng hàng theo mẫu có sử dụng cảm biến mắt.\nSử dụng các lệnh điều kiện if...else và vòng lặp để lập trình mô hình hoạt động.\nKết hợp tùy chỉnh vật lý mô hình và nội dung lập trình để tăng sức nâng cho mô hình." },
+        4: { title: "CÔNG XƯỞNG SÁNG TẠO 1", content: "Dưới sự gợi ý của giáo viên, học viên thảo luận theo nhóm lựa chọn mô hình kết hợp LED Bumper và cảm biến mắt.\nThực hiện lắp ráp mô hình.\nSử dụng thẻ lệnh đã học lập trình mô hình hoạt động và tham gia thi đấu cùng với nhóm khác." },
+        5: { title: "XE TẢI SIÊU TRỌNG", content: "Học viên ôn tập kiến thức học phần trước.\nHọc viên lắp mô hình xe trang bị 2 động cơ đối xứng.\nHọc viên tìm hiểu nguyên tắc di chuyển mô hình xe trang bị 2 động cơ.\nLập trình mô hình hoạt động." },
+        6: { title: "DỪNG XE KHẨN CẤP", content: "Trang bị thêm LED Bumper cho mô hình xe trong bài học Xe tải siêu trọng.\nLàm quen với thẻ lệnh hiển thị màu sắc LED Bumper, kết hợp câu lệnh điều kiện if...else và vòng lặp để lập trình mô hình có thể phản hồi linh hoạt khi nhận tín hiệu từ cảm biến." },
+        7: { title: "NÉ TRÁNH CHƯỚNG NGẠI VẬT", content: "Trang bị thêm cảm biến mắt cho mô hình xe trong bài học Xe tải siêu trọng.\nSử dụng thẻ lệnh hiển thị màu sắc LED Bumper, điều kiện if...else, vòng lặp lập trình mô hình hoạt động hoặc ngừng lại khi thấy vật cản." },
+        8: { title: "CÔNG XƯỞNG SÁNG TẠO 2", content: "Thảo luận nhóm và thiết kế mô hình sáng tạo kết hợp cảm biến mắt và LED Bumper.\nThực hiện lắp ráp, nâng cấp kết cấu cơ khí cho xe.\nLập trình hoàn thiện tính năng và tham gia thử thách công xưởng." },
+        9: { title: "XE TỰ VẬN HÀNH (PHẦN 1)", content: "Học viên tìm hiểu những loại xe tự vận hành trên thế giới và vai trò của xe tự vận hành trong đời sống con người.\nLập trình mô hình di chuyển và dừng lại khi phát hiện màu sắc (đỏ, xanh dương, xanh lá cây) với thẻ điều kiện if...else, vòng lặp." },
+        10: { title: "XE TỰ VẬN HÀNH (PHẦN 2)", content: "Lắp ráp mô hình Xe tự vận hành.\nKết hợp thẻ lệnh di chuyển, thẻ lệnh điều kiện if...else, vòng lặp để lập trình mô hình thu gom các đĩa màu (đỏ, xanh dương, xanh lá cây)." },
+        11: { title: "THÔNG ĐIỆP SAO HỎA", content: "Dưới sự hướng dẫn của GV, HV lắp ráp mô hình theo mẫu.\nKết hợp thẻ lệnh liên quan đến nam châm điện, thẻ lệnh điều kiện if...else (LED Bumper, cảm biến mắt), vòng lặp, thẻ lệnh hiển thị lập trình mô hình thu gom các đĩa màu (đỏ, xanh dương, xanh lá cây)." },
+        12: { title: "CÔNG XƯỞNG SÁNG TẠO 3", content: "Tổng hợp các kiến thức lắp ráp và lập trình đã học trong toàn khóa.\nThực hiện dự án sáng tạo nhóm theo chủ đề Công xưởng vũ trụ.\nHoàn thiện mô hình và kiểm thử chức năng." },
+        13: { title: "KỊCH BẢN DEMO & TỔNG KẾT", content: "Ôn tập lắp ráp mô hình.\nÔn tập cách kết nối Não và Tablet.\nÔn tập các thẻ lệnh đã học, chuẩn bị cho bài thử thách cuối khóa học." }
+    };
+
+    // SYLLABUS HỆ LỚP "PTB"
+    const syllabusPTB = {
+        1: { title: "Thế giới ngôn ngữ và xứ Python kì diệu", content: "Tìm hiểu ngôn ngữ máy và ngôn ngữ bậc cao.\nCài đặt môi trường lập trình Python.\nSử dụng phần mềm VSCode và tổ chức file.\nMột số lệnh Python cơ bản." },
+        2: { title: "Sức mạnh của biến và kiểu dữ liệu", content: "Tìm hiểu biến trong Python.\nCác từ khóa Python cơ bản.\nQuy tắc đặt tên biến trong Python.\nCác kiểu dữ liệu cơ bản và ép kiểu dữ liệu." },
+        3: { title: "Tính toán toán tử", content: "Giới thiệu về toán tử.\nToán tử số học.\nToán tử quan hệ.\nToán tử logic và biểu thức logic." },
+        4: { title: "Rẽ nhánh bằng câu điều kiện", content: "Biểu thức điều kiện.\nCâu điều kiện if - elif - else.\nGiới thiệu về thuật toán.\nVẽ sơ đồ khối." },
+        5: { title: "Checkpoint 1", content: "Thực hiện bài kiểm tra Đánh giá năng lực (Checkpoint 1)." },
+        6: { title: "Vòng lặp hữu hạn: Lặp bao nhiêu lần?", content: "Vòng lặp hữu hạn.\nVòng lặp for với lệnh range().\nVòng lặp for lồng nhau.\nThực hành xây dựng thuật toán và vẽ sơ đồ khối với vòng lặp hữu hạn." },
+        7: { title: "Vòng lặp vô hạn: Lặp đến khi nào?", content: "Tính chất vòng lặp vô hạn.\nVòng lặp while.\nVòng lặp while lồng nhau.\nThực hành xây dựng thuật toán và vẽ sơ đồ khối với vòng lặp vô hạn." },
+        8: { title: "Lập trình giải quyết vấn đề", content: "Vận dụng các kiến thức đã học (Biến, Điều kiện, Vòng lặp) để giải quyết vấn đề thực tế." },
+        9: { title: "Checkpoint 2", content: "Thực hiện bài kiểm tra Đánh giá năng lực (Checkpoint 2)." },
+        10: { title: "Danh sách và hơn thế nữa", content: "Duyệt phần tử trong danh sách (List).\nCác hàm để thao tác với danh sách.\nThực hành thêm, xóa, sửa các phần tử trong danh sách." },
+        11: { title: "Xâu kí tự", content: "Xâu ký tự (String) và duyệt xâu.\nXâu con và cắt chuỗi xâu.\nMột số lệnh/phương thức làm việc với xâu ký tự." },
+        12: { title: "Hàm – Chia nhỏ công việc", content: "Định nghĩa hàm (def).\nThiết lập hàm không có giá trị trả về.\nTruyền tham số vào hàm và phạm vi của tham số." },
+        13: { title: "Hàm với giá trị mang lại", content: "Mô tả và khởi tạo hàm có giá trị trả về (return).\nPhân biệt hàm có giá trị trả về và hàm không có giá trị trả về.\nXác định và ứng dụng các hàm có sẵn và thư viện thông dụng." },
+        14: { title: "CODING SHOWDOWN", content: "Tìm hiểu và sử dụng nền tảng Coding Showdown tham dự cuộc thi.\nTham gia thử thách tư duy và lập trình cạnh tranh trực tiếp.\nThi đấu giành điểm cao nhất để đứng đầu bảng xếp hạng." }
+    };
+
+    function onTimeSelectChange() {
+        const select = document.getElementById('timeSelect');
+        const customInput = document.getElementById('customTime');
+        if (select.value === 'CUSTOM') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
+    function getTimeValue() {
+        const select = document.getElementById('timeSelect');
+        if (select.value === 'CUSTOM') {
+            return document.getElementById('customTime').value.trim() || '19h30';
+        }
+        return select.value;
+    }
+
+    function updateClassDropdown() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const classSelect = document.getElementById('classSelect');
+        classSelect.innerHTML = '<option value="">-- Chọn danh sách lớp --</option>';
+
+        Object.keys(classList).forEach(cKey => {
+            const cls = classList[cKey];
+            if (cls.mode === mode) {
+                const opt = document.createElement('option');
+                opt.value = cKey;
+                opt.innerText = `Lớp ${cKey}`;
+                classSelect.appendChild(opt);
+            }
+        });
+
+        const customOpt = document.createElement('option');
+        customOpt.value = "CUSTOM";
+        customOpt.innerText = "Chế độ tự nhập thủ công";
+        classSelect.appendChild(customOpt);
+
+        loadClassStudents();
+    }
+
+    function onModeChange() {
+        updateClassDropdown();
+        updateLessonSelectOptions();
+        checkCheckpointWarning();
+        autoFillSyllabus();
+    }
+
+    function onClassChange() {
+        loadClassStudents();
+        autoFillSyllabus();
+    }
+
+    function onLessonNoChange() {
+        checkCheckpointWarning();
+        autoFillSyllabus();
+    }
+
+    function autoFillSyllabus() {
+        const selectedClass = (document.getElementById('classSelect').value || '').toUpperCase();
+        const lessonNo = parseInt(document.getElementById('lessonNoSelect').value);
+
+        if (selectedClass.includes('GB') && syllabusGB[lessonNo]) {
+            document.getElementById('lessonTitle').value = syllabusGB[lessonNo].title;
+            document.getElementById('lessonContent').value = syllabusGB[lessonNo].content;
+        } else if (selectedClass.includes('GA') && syllabusGA[lessonNo]) {
+            document.getElementById('lessonTitle').value = syllabusGA[lessonNo].title;
+            document.getElementById('lessonContent').value = syllabusGA[lessonNo].content;
+        } else if (selectedClass.includes('PREI') && syllabusPREI[lessonNo]) {
+            document.getElementById('lessonTitle').value = syllabusPREI[lessonNo].title;
+            document.getElementById('lessonContent').value = syllabusPREI[lessonNo].content;
+        } else if (selectedClass.includes('PTB') && syllabusPTB[lessonNo]) {
+            document.getElementById('lessonTitle').value = syllabusPTB[lessonNo].title;
+            document.getElementById('lessonContent').value = syllabusPTB[lessonNo].content;
+        } else {
+            document.getElementById('lessonTitle').value = '';
+            document.getElementById('lessonContent').value = '';
+        }
+    }
+
+    function updateLessonSelectOptions() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const select = document.getElementById('lessonNoSelect');
+        const currentVal = select.value || "1";
+        
+        select.innerHTML = '';
+        for (let i = 1; i <= 14; i++) {
+            let label = `Buổi ${i}`;
+            if (mode === 'coding') {
+                if (i === 4) label += " ⚠️ (Nhắc Checkpoint 1)";
+                else if (i === 5) label += " 🎯 (Checkpoint 1)";
+                else if (i === 8) label += " ⚠️ (Nhắc Checkpoint 2)";
+                else if (i === 9) label += " 🎯 (Checkpoint 2)";
+            } else {
+                if (i === 3) label += " ⚠️ (Nhắc Checkpoint 1)";
+                else if (i === 4) label += " 🎯 (Checkpoint 1)";
+                else if (i === 7) label += " ⚠️ (Nhắc Checkpoint 2)";
+                else if (i === 8) label += " 🎯 (Checkpoint 2)";
+            }
+
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = label;
+            select.appendChild(opt);
+        }
+        select.value = currentVal;
+    }
+
+    function checkCheckpointWarning() {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const lessonNo = parseInt(document.getElementById('lessonNoSelect').value);
+        const warningBox = document.getElementById('checkpointWarning');
+        const activeNotice = document.getElementById('checkpointActiveNotice');
+
+        let isPreCheckpoint = false;
+        let isCheckpoint = false;
+
+        if (mode === 'coding') {
+            if (lessonNo === 4 || lessonNo === 8) isPreCheckpoint = true;
+            if (lessonNo === 5 || lessonNo === 9) isCheckpoint = true;
+        } else {
+            if (lessonNo === 3 || lessonNo === 7) isPreCheckpoint = true;
+            if (lessonNo === 4 || lessonNo === 8) isCheckpoint = true;
+        }
+
+        warningBox.style.display = isPreCheckpoint ? 'block' : 'none';
+        activeNotice.style.display = isCheckpoint ? 'block' : 'none';
+    }
+
+    function loadClassStudents() {
+        const selectedClass = document.getElementById('classSelect').value;
+        const container = document.getElementById('studentCheckboxContainer');
+        const area = document.getElementById('attendanceArea');
+        const studentList = document.getElementById('studentList');
+
+        container.innerHTML = '';
+        studentList.innerHTML = '';
+
+        if (!selectedClass || selectedClass === 'CUSTOM') {
+            area.style.display = 'none';
+            document.getElementById('attendance').value = '';
+            studentList.innerHTML = '<p id="emptyNotice" style="color: #64748b; font-style: italic; text-align: center; padding: 10px;">Đang ở chế độ tự nhập. Nhấn nút "Thêm học viên ngoài danh sách" để khởi tạo dòng nhận xét.</p>';
+            return;
+        }
+
+        area.style.display = 'block';
+        const students = (classList[selectedClass] && classList[selectedClass].students) ? classList[selectedClass].students : [];
+
+        students.forEach((name) => {
+            const label = document.createElement('label');
+            label.className = 'student-checkbox-item';
+            label.innerHTML = `<input type="checkbox" checked onchange="updateAttendance('${selectedClass}')" data-name="${name}"> ${name}`;
+            container.appendChild(label);
+        });
+
+        updateAttendance(selectedClass);
+    }
+
+    function updateAttendance(className) {
+        const checkboxes = document.querySelectorAll('#studentCheckboxContainer input[type="checkbox"]');
+        const total = checkboxes.length;
+        let presentCount = 0;
+
+        const studentList = document.getElementById('studentList');
+        studentList.innerHTML = '';
+
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                presentCount++;
+                const name = cb.getAttribute('data-name');
+                createStudentRowCard(name);
+            }
+        });
+
+        document.getElementById('attendance').value = `${presentCount}/${total}`;
+
+        if (presentCount === 0) {
+            studentList.innerHTML = '<p id="emptyNotice" style="color: #64748b; font-style: italic; text-align: center; padding: 10px;">Chưa chọn học viên tham gia buổi học.</p>';
+        }
+    }
+
+    function addCustomStudent(defaultName = '') {
+        const notice = document.getElementById('emptyNotice');
+        if (notice) notice.remove();
+        createStudentRowCard(defaultName);
+    }
+
+    function createStudentRowCard(studentName = '') {
+        const div = document.createElement('div');
+        div.className = 'student-row-card';
+        div.innerHTML = `
+            <div style="display: grid; grid-template-columns: 2fr 1.8fr 40px; gap: 10px; align-items: center;">
+                <input type="text" class="st-name" value="${studentName}" placeholder="Tên học viên">
+                <select class="st-level">
+                    <option value="excellent">🌟 Xuất sắc / Tư duy tốt</option>
+                    <option value="good" selected>⭐ Tốt / Nắm vững bài</option>
+                    <option value="medium">Đạt / Nắm kiến thức cơ bản</option>
+                    <option value="slow">📘 Cần thời gian rèn luyện thêm</option>
+                    <option value="distracted">⚠️ Chưa tập trung khi làm bài</option>
+                    <option value="need_help">🆘 Cần hỗ trợ sát sao</option>
+                </select>
+                <button class="btn btn-danger" onclick="this.parentElement.parentElement.remove()">✕</button>
+            </div>
+
+            <div class="tags-container">
+                <span style="font-size: 12px; font-weight: 600; color: #64748b; width: 100%;">Tích chọn biểu hiện học tập cần lưu ý:</span>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="chua_tap_trung"> 🌀 Đôi lúc chưa tập trung</label>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="xao_nhang"> 📱 Hay xao nhãng trong giờ</label>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="noi_chuyen"> 💬 Hay trao đổi việc riêng</label>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="thao_tac_máy"> ⌨️ Thao tác máy còn lúng túng</label>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="hang_hai"> 🙋 Tích cực phát biểu</label>
+                <label class="tag-btn"><input type="checkbox" class="st-tag" value="lam_bai_nhanh"> ⚡ Tiếp thu bài nhanh</label>
+            </div>
+
+            <input type="text" class="st-note" placeholder="Ghi chú sư phạm bổ sung (nếu có)..." style="width: 100%;">
+        `;
+        document.getElementById('studentList').appendChild(div);
+    }
+
+    const dbNormal = {
+        coding: {
+            excellent: [
+                "Em có tư duy logic sắc bén, khả năng tiếp thu kiến thức mới rất nhanh và chính xác.|Em hoàn thành xuất sắc các bài tập thực hành trên lớp và luôn chủ động tìm hiểu các yêu cầu nâng cao.|Thầy biểu dương tinh thần học tập tích cực và niềm đam mê với môn học của em.",
+                "Em thể hiện sự vượt trội trong buổi học, thao tác trên máy tính thuần thục và cẩn thận.|Em nắm chắc bản chất logic của câu lệnh và chủ động hỗ trợ các bạn cùng lớp.|Thầy đánh giá rất cao sự tập trung và tinh thần tự giác của em.",
+                "Em hiểu sâu sắc nội dung bài học, xử lý các bài tập thực hành chính xác và hiệu quả.|Em hoàn thành nhiệm vụ nhanh chóng, đồng thời phát triển thêm nhiều ý tưởng sáng tạo độc đáo.|Mong em tiếp tục duy trì và phát huy phong độ học tập này."
+            ],
+            good: [
+                "Em tham gia buổi học đầy đủ, tập trung theo dõi bài giảng và có ý thức hoàn thành tốt nhiệm vụ.|Em nắm vững nội dung bài học và thực hành các câu lệnh chính xác.|Mong em tiếp tục duy trì tinh thần học tập nghiêm túc hiện tại.",
+                "Em có thái độ học tập rất tích cực, tiếp thu nhanh các nội dung thực hành trên máy.|Em hoàn thành tốt các bài tập và biết vận dụng linh hoạt kiến thức vào bài làm.|Thầy mong em tiếp tục phát huy trong các buổi học tiếp theo.",
+                "Em tập trung lắng nghe hướng dẫn, nắm chắc các thao tác thực hành trong buổi học.|Em chủ động hoàn thành bài tập đúng thời gian mà ít cần sự trợ giúp từ thầy.|Thầy rất hài lòng với sự chăm chỉ và tính tự giác của em.",
+                "Em đi học đúng giờ, chấp hành tốt nội quy và thực hiện nghiêm túc các bài tập được giao.|Kiến thức bài học hôm nay em tiếp thu tốt và thực hành bài làm rất thuần thục.|Thầy ghi nhận sự cố gắng và tinh thần học tập của em.",
+                "Em tiếp thu bài khá nhanh, thao tác trên máy tính cẩn thận và chuẩn xác.|Em hoàn thành bài tập đúng tiến độ và hiểu rõ cấu trúc logic của chương trình.|Chúc em tiếp tục tiến bộ hơn nữa trong suốt khóa học nhé."
+            ],
+            medium: [
+                "Em tham gia lớp học đầy đủ, chú ý lắng nghe và có ý thức thực hành bài tập.|Em nắm được kiến thức nền tảng của bài học, tuy nhiên cần rèn luyện thêm để thao tác được thành thạo hơn.|Mong em chủ động ôn tập và mạnh dạn trao đổi với thầy khi gặp vướng mắc.",
+                "Em có thái độ học tập nghiêm túc và chấp hành tốt nội quy lớp học.|Em tiếp thu tốt các nội dung trọng tâm nhưng cần dành thêm thời gian luyện tập.|Thầy tin em sẽ tiến bộ hơn khi thường xuyên rèn luyện tại nhà.",
+                "Em theo dõi hướng dẫn của thầy tương đối cẩn thận và hiểu bài ở mức cơ bản.|Tuy nhiên, thao tác kỹ thuật lập trình của em cần luyện tập thêm để phản xạ tốt hơn.|Em cố gắng dành thêm thời gian thực hành ở nhà nhé."
+            ],
+            slow: [
+                "Em có thái độ học tập ngoan ngoãn, chú ý lắng nghe thầy giảng bài.|Em hiểu được nội dung cơ bản nhưng tốc độ thao tác trên máy tính còn hơi chậm so với các bạn.|Thầy mong em dành thêm thời gian rèn luyện tại nhà để nâng cao tốc độ làm bài.",
+                "Em rất cố gắng trong giờ học và nghiêm túc theo dõi bài giảng.|Do nội dung bài học có nhiều kiến thức mới, em cần thêm chút thời gian để tiếp thu trọn vẹn.|Em cứ kiên trì thực hành thêm tại nhà là sẽ thao tác thuần thục ngay."
+            ],
+            distracted: [
+                "Em có khả năng tiếp thu bài tốt và nắm được các kiến thức trọng tâm.|Tuy nhiên trong giờ đôi lúc em còn chưa tập trung theo dõi hướng dẫn của thầy.|Mong em nghiêm túc hơn để không bị bỏ lỡ các nội dung bài học quan trọng.",
+                "Em thông minh và nắm bài khá nhanh khi tập trung theo dõi bài giảng.|Dù vậy đôi lúc em còn hay xao nhãng, chưa chú ý hoàn toàn vào bài làm.|Thầy mong em tập trung cao độ hơn để phát huy đúng năng lực của mình."
+            ],
+            need_help: [
+                "Em có thái độ học tập nghiêm túc và tham gia đầy đủ buổi học.|Em đã nắm được một phần kiến thức nhưng vẫn cần thầy hỗ trợ trực tiếp để hoàn thành bài tập.|Thầy mong em dành thêm thời gian ôn tập để củng cố kiến thức vững chắc hơn."
+            ]
+        },
+        robot: {
+            excellent: [
+                "Bạn có tư duy kỹ thuật rất tốt, tiếp thu bài nhanh và luôn duy trì sự tập trung cao độ. Trong buổi học hôm nay, bạn không chỉ lắp ráp mô hình chuẩn xác mà còn chủ động thực hành các câu lệnh điều khiển linh hoạt. Thầy đánh giá rất cao tinh thần học tập của bạn!",
+                "Bạn hoàn thành xuất sắc nhiệm vụ buổi học, thao tác lắp ráp cẩn thận và lập trình robot hoạt động chính xác. Bạn rất tự giác và thể hiện tố chất tư duy kỹ thuật vượt trội."
+            ],
+            good: [
+                "Bạn có tinh thần học tập rất tốt và luôn duy trì sự nghiêm túc trong lớp. Bạn chú ý lắng nghe hướng dẫn, lắp ráp mô hình khéo léo và thực hiện đúng các bài tập lập trình. Thầy ghi nhận sự chăm chỉ và ý thức học tập tích cực của bạn.",
+                "Bạn tham gia học tập nghiêm túc, tập trung và hoàn thành tốt các nội dung của buổi học. Trong quá trình thao tác, bạn thực hiện đúng các bước và biết vận dụng câu lệnh để điều khiển mô hình. Thầy mong bạn tiếp tục giữ vững phong độ này.",
+                "Bạn đi học đúng giờ và thể hiện thái độ tích cực xuyên suốt buổi học. Thao tác lắp ráp mô hình của bạn rất chắc chắn, phần lập trình xử lý mạch lạc, chính xác. Thầy đánh giá cao sự tỉ mỉ của bạn hôm nay.",
+                "Bạn lắng nghe hướng dẫn rất cẩn thận, nắm nhanh nguyên lý hoạt động của mô hình. Bạn thực hành thành công nhiệm vụ được giao và phối hợp tốt với các bạn xung quanh. Mong bạn tiếp tục phát huy!",
+                "Bạn rất hào hứng với chủ đề bài học hôm nay. Quá trình lắp ráp và nạp chương trình điều khiển đều được bạn hoàn thành gọn gàng, chuẩn xác. Thầy rất khen ngợi tinh thần tự giác của bạn."
+            ],
+            medium: [
+                "Bạn có thái độ học tập nghiêm túc, chú ý lắng nghe và tập trung trong giờ. Bạn thực hiện tốt phần lắp ráp mô hình và hoàn thành các yêu cầu cơ bản của bài học. Thầy mong bạn sẽ tự tin hơn khi thử nghiệm các ý tưởng mới.",
+                "Bạn tham gia buổi học với tinh thần tích cực và chăm chỉ theo dõi bài giảng. Trong quá trình thực hành, bạn thực hiện đúng hướng dẫn và hoàn thành nhiệm vụ. Hy vọng bạn sẽ tiếp tục duy trì sự cẩn thận này."
+            ],
+            slow: [
+                "Bạn chấp hành tốt nội quy lớp học và có ý thức làm bài. Tuy nhiên, thao tác lắp ráp và tiếp thu câu lệnh của bạn còn hơi chậm. Thầy mong bạn kiên trì hơn và dành thêm thời gian luyện tập nhé."
+            ],
+            distracted: [
+                "Bạn tiếp thu bài khá tốt nhưng trong giờ học đôi lúc còn chưa tập trung hoàn toàn. Thầy mong bạn sẽ chú ý lắng nghe hướng dẫn hơn để hoàn thành bài học nhanh chóng và hiệu quả."
+            ],
+            need_help: [
+                "Bạn có thái độ học tập tích cực nhưng do kiến thức bài học khá mới nên vẫn cần thầy hướng dẫn chi tiết từng bước. Bạn cố gắng luyện tập thêm ở nhà để quen thuộc hơn nhé."
+            ]
+        }
+    };
+
+    const dbCheckpoint = {
+        coding: {
+            excellent: [
+                "Em nắm rất chắc hệ thống kiến thức đã học, hoàn thành bài kiểm tra Đánh giá năng lực xuất sắc và chính xác.|Thái độ làm bài vô cùng nghiêm túc, tập trung cao độ và cẩn thận kiểm thử chương trình trước khi nộp.|Thầy khen ngợi tư duy thuật toán sắc bén và sự tiến bộ vượt bậc của em!",
+                "Em thể hiện sự vượt trội trong bài kiểm tra Checkpoint, vận dụng linh hoạt kiến thức logic để giải quyết yêu cầu bài toán.|Em giữ thái độ làm bài tự giác, bình tĩnh và thao tác chuẩn xác.|Thầy tuyên dương tinh thần học tập xuất sắc của em."
+            ],
+            good: [
+                "Em nắm vững các kiến thức trọng tâm, thực hành bài kiểm tra Checkpoint tốt và đáp ứng đầy đủ yêu cầu.|Thái độ làm bài nghiêm túc, chú ý lắng nghe dặn dò và có ý thức trình trình bài cẩn thận.|Thầy mong em tiếp tục giữ vững phong độ này trong thời gian tới.",
+                "Em đã hệ thống hóa tốt kiến thức đã học, xử lý các yêu cầu trong bài kiểm tra thành thạo.|Trong suốt thời gian kiểm tra em rất tập trung và tự giác thực hiện bài làm.|Thầy rất hài lòng với kết quả đánh giá của em hôm nay."
+            ],
+            medium: [
+                "Em đã nắm được các kiến thức nền tảng để hoàn thành các nội dung chính của bài kiểm tra.|Thái độ làm bài nghiêm túc, tuy nhiên cần cẩn thận hơn để tránh các lỗi nhỏ về mặt cú pháp.|Thầy tin nếu rèn luyện cẩn thận hơn em sẽ đạt kết quả tốt hơn nữa.",
+                "Em có cố gắng và hoàn thành được các bài tập trọng tâm trong đề kiểm tra Checkpoint.|Em tập trung làm bài, tuy nhiên tư duy xử lý logic ở một số yêu cầu nâng cao vẫn cần rèn luyện thêm.|Mong em chủ động ôn tập lại kiến thức bài học."
+            ],
+            slow: [
+                "Em hiểu được các dạng bài cơ bản nhưng tốc độ thao tác và tư duy giải bài kiểm tra vẫn còn hơi chậm.|Em làm bài cẩn thận và kiên trì, có ý thức hoàn thành nhiệm vụ.|Thầy mong em dành thêm thời gian luyện tập tại nhà để nâng cao phản xạ lập trình.",
+                "Em nắm được tư duy cơ bản nhưng thao tác gõ lệnh trong buổi kiểm tra vẫn còn lúng túng.|Thái độ làm bài nghiêm túc và chăm chỉ.|Em cứ tự tin luyện tập thêm, chắc chắn em sẽ thao tác thành thạo hơn."
+            ],
+            distracted: [
+                "Em có khả năng tư duy khá tốt, tuy nhiên kết quả bài kiểm tra chưa tối ưu do chưa đọc kỹ yêu cầu đề bài.|Trong giờ kiểm tra đôi lúc em còn thiếu tập trung.|Thầy mong em rút kinh nghiệm, rèn luyện tính cẩn thận và chú ý hơn trong các bài đánh giá sau.",
+                "Em nắm được kiến thức ở mức khá nhưng thái độ làm bài kiểm tra cần cẩn trọng hơn, tránh làm vội vàng.|Em cần tập trung cao độ hơn trong suốt thời gian làm bài để phát huy đúng năng lực của mình."
+            ],
+            need_help: [
+                "Em còn hổng một số phần kiến thức cơ bản nên gặp khó khăn khi tự lực thực hiện bài kiểm tra.|Thái độ làm bài nghiêm túc nhưng còn lúng túng khi xử lý các yêu cầu độc lập.|Thầy sẽ tiếp tục đồng hành và hỗ trợ em củng cố lại các phần kiến thức này."
+            ]
+        },
+        robot: {
+            excellent: [
+                "Bạn ghi nhớ rất chuẩn xác các câu lệnh VEXcode GO đã học, thao tác lắp ráp cẩn thận và thực hành bài kiểm tra thành thạo. Trong suốt buổi đánh giá, bạn rất tự tin và tập trung cao độ. Thầy tuyên dương tinh thần học tập xuất sắc của bạn!",
+                "Bạn hoàn thành xuất sắc bài kiểm tra Checkpoint! Bạn nhớ câu lệnh rất tốt, tư duy điều khiển robot linh hoạt và chủ động thực hiện nhiệm vụ. Thầy rất tự hào về kết quả đạt được của bạn!"
+            ],
+            good: [
+                "Bạn nhớ tốt các câu lệnh quen thuộc và áp dụng chuẩn xác vào bài kiểm tra. Bạn thao tác cẩn thận, biết cách kiểm tra lại chương trình khi robot chạy chưa đúng yêu cầu. Thầy ghi nhận nỗ lực và tinh thần học tập của bạn!",
+                "Bạn tham gia buổi kiểm tra Checkpoint với thái độ nghiêm túc và tích cực. Bạn nhớ bài tốt, lập trình điều khiển mô hình thực hiện đúng yêu cầu. Thầy mong bạn tiếp tục phát huy niềm yêu thích môn học!",
+                "Bạn thể hiện sự tiến bộ rõ rệt trong buổi kiểm tra Checkpoint hôm nay. Bạn nhớ các khối lệnh di chuyển và cảm biến nhanh nhẹn, thao tác khéo léo. Thầy rất khen ngợi sự chăm chỉ của bạn."
+            ],
+            medium: [
+                "Bạn nỗ lực trong buổi kiểm tra và giữ thái độ học tập tốt. Bạn nhớ được các nhóm câu lệnh cơ bản, tuy đôi lúc còn nhầm lẫn nhỏ nhưng khi thầy gợi ý nhẹ là bạn nhận ra và sửa được ngay. Bạn cố gắng thêm chút nữa là sẽ rất giỏi!",
+                "Bạn tham gia bài kiểm tra với thái độ nghiêm túc. Bạn đã biết cách chọn khối lệnh lập trình cơ bản cho robot, tuy thao tác nhớ lệnh đôi lúc còn ngập ngừng. Thầy tin luyện tập thêm bạn sẽ ghi nhớ rất lâu."
+            ],
+            slow: [
+                "Bạn kiên trì hoàn thành bài kiểm tra Checkpoint. Tuy khả năng nhớ các câu lệnh lập trình của bạn cần nhiều thời gian hơn một chút, nhưng bạn rất cố gắng làm theo hướng dẫn. Thầy sẽ tiếp tục đồng hành để bạn rèn luyện tốt hơn.",
+                "Bạn có nhiều cố gắng trong buổi kiểm tra hôm nay. Việc ghi nhớ các nhóm câu lệnh mới đòi hỏi sự kiên trì và bạn đã thể hiện tinh thần không nản lòng. Thầy rất ghi nhận sự nỗ lực của bạn!"
+            ],
+            distracted: [
+                "Bạn ghi nhớ câu lệnh và bài học rất tốt. Tuy nhiên trong giờ kiểm tra đôi lúc bạn còn xao nhãng, chưa tập trung hoàn toàn. Chỉ cần chú ý hơn một chút là bài làm của bạn sẽ chuẩn xác hơn nữa!",
+                "Bạn thông minh và tiếp thu lệnh robot nhanh, nhưng đôi lúc còn chưa tập trung hết sức trong giờ kiểm tra. Thầy mong bạn chú ý hơn ở các buổi sau để thể hiện trọn vẹn năng lực của mình."
+            ],
+            need_help: [
+                "Bạn có thái độ học tập nghiêm túc và hợp tác. Do kiến thức câu lệnh lập trình còn khá mới nên bạn vẫn cần thầy gợi ý từng bước để hoàn thành bài Checkpoint. Thầy trò mình sẽ cùng rèn luyện thêm trong các buổi tới nhé!"
+            ]
+        }
+    };
+
+    const tagDictionary = {
+        coding: {
+            chua_tap_trung: "trong giờ em đôi lúc còn chưa thực sự tập trung lắng nghe hướng dẫn",
+            xao_nhang: "em còn hay xao nhãng và chú ý sang các hoạt động khác",
+            noi_chuyen: "em còn hay trao đổi việc riêng với các bạn xung quanh",
+            thao_tac_máy: "thao tác sử dụng bàn phím và máy tính của em còn chưa thật sự thành thạo",
+            hang_hai: "em rất hăng hái tích cực phát biểu xây dựng bài",
+            lam_bai_nhanh: "em tiếp thu bài nhanh và thao tác hoàn thành bài tập rất tốt"
+        },
+        robot: {
+            chua_tap_trung: "bạn còn đôi lúc chưa tập trung chú ý lắng nghe thầy hướng dẫn",
+            xao_nhang: "bạn còn xao nhãng trong quá trình làm bài",
+            noi_chuyen: "bạn còn hay trao đổi việc riêng trong lớp",
+            thao_tac_máy: "thao tác lắp ráp và bấm máy của bạn còn hơi lúng túng",
+            hang_hai: "bạn rất hăng hái xung phong tương tác cùng thầy",
+            lam_bai_nhanh: "bạn thao tác mô hình rất nhanh nhẹn và cẩn thận"
+        }
+    };
+
+    function buildBehaviorSentence(rowElement, mode) {
+        const checkedTags = Array.from(rowElement.querySelectorAll('.st-tag:checked')).map(cb => cb.value);
+        const extraNote = rowElement.querySelector('.st-note').value.trim();
+
+        if (checkedTags.length === 0 && !extraNote) return "";
+
+        let behaviorTexts = checkedTags.map(tag => tagDictionary[mode][tag]);
+        
+        if (extraNote) {
+            behaviorTexts.push(extraNote.toLowerCase());
+        }
+
+        if (behaviorTexts.length === 0) return "";
+
+        let mergedText = "";
+        if (behaviorTexts.length === 1) {
+            mergedText = behaviorTexts[0];
+        } else {
+            const last = behaviorTexts.pop();
+            mergedText = behaviorTexts.join(", ") + " và " + last;
+        }
+
+        const isOnlyPraise = checkedTags.every(t => t === 'hang_hai' || t === 'lam_bai_nhanh') && !extraNote;
+
+        if (mode === 'coding') {
+            if (isOnlyPraise) {
+                return `Thầy rất biểu dương vì ${mergedText}.`;
+            } else {
+                return `Tuy nhiên, thầy lưu ý là ${mergedText} và mong em rút kinh nghiệm ở các buổi học sau.`;
+            }
+        } else {
+            if (isOnlyPraise) {
+                return `Đặc biệt, thầy rất khen ngợi việc ${mergedText}.`;
+            } else {
+                return `Tuy nhiên, thầy nhận thấy ${mergedText} và mong bạn chú ý cải thiện trong các buổi học tới.`;
+            }
+        }
+    }
+
+    let generatedExcelData = [];
+    let usedIndices = {};
+
+    function getUniqueComment(mode, level, isCheckpoint) {
+        if (!usedIndices[mode]) usedIndices[mode] = {};
+        if (!usedIndices[mode][level]) usedIndices[mode][level] = [];
+
+        const sourceDb = isCheckpoint ? dbCheckpoint : dbNormal;
+        const options = sourceDb[mode][level];
+        
+        if (usedIndices[mode][level].length >= options.length) {
+            usedIndices[mode][level] = [];
+        }
+
+        let available = [];
+        for (let i = 0; i < options.length; i++) {
+            if (!usedIndices[mode][level].includes(i)) {
+                available.push(i);
+            }
+        }
+
+        const chosenIndex = available[Math.floor(Math.random() * available.length)];
+        usedIndices[mode][level].push(chosenIndex);
+
+        return options[chosenIndex];
+    }
+
+    function generateReport() {
+        usedIndices = {}; 
+
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const selectedClassText = document.getElementById('classSelect').options[document.getElementById('classSelect').selectedIndex].text;
+        const className = document.getElementById('classSelect').value ? selectedClassText.replace(/Lớp\s*/g, '') : 'Lớp Học';
+        
+        const attendance = document.getElementById('attendance').value.trim() || '7/7';
+        const lessonTitle = document.getElementById('lessonTitle').value.trim() || 'BÀI HỌC MỚI';
+        const lessonNoVal = parseInt(document.getElementById('lessonNoSelect').value);
+        const lessonNoStr = `BUỔI ${lessonNoVal}`;
+        const lessonTime = getTimeValue();
+        
+        const rawDate = new Date(document.getElementById('lessonDate').value);
+        const formattedDate = `${String(rawDate.getDate()).padStart(2, '0')}/${String(rawDate.getMonth() + 1).padStart(2, '0')}`;
+
+        let isCheckpoint = false;
+        if (mode === 'coding' && (lessonNoVal === 5 || lessonNoVal === 9)) isCheckpoint = true;
+        if (mode === 'robot' && (lessonNoVal === 4 || lessonNoVal === 8)) isCheckpoint = true;
+
+        const contentRaw = document.getElementById('lessonContent').value.trim();
+        const contentLines = contentRaw ? contentRaw.split('\n').map(line => `•             ${line.trim()}`).join('\n') : (isCheckpoint ? '•             Thực hành làm bài kiểm tra Đánh giá năng lực (Checkpoint).' : '•             Nội dung bài học thực hành và lý thuyết.');
+
+        const rows = document.querySelectorAll('.student-row-card');
+        if (rows.length === 0) {
+            alert("Vui lòng chọn hoặc thêm ít nhất 1 học viên!");
+            return;
+        }
+
+        let studentsText = '';
+        generatedExcelData = [];
+
+        // ĐẾM VÀ PHÁT HIỆN SỐ LƯỢNG BẠN XAO NHÃNG / CHƯA TẬP TRUNG
+        let hasDistractedStudents = false;
+
+        rows.forEach((row, index) => {
+            const name = row.querySelector('.st-name').value.trim() || `Học viên ${index + 1}`;
+            const level = row.querySelector('.st-level').value;
+
+            // KIỂM TRA MỨC ĐỘ VÀ TAG ĐỂ PHÁT HIỆN BIỂU HIỆN CẦN LƯU Ý
+            const checkedTags = Array.from(row.querySelectorAll('.st-tag:checked')).map(cb => cb.value);
+            const hasDistractedTag = checkedTags.some(t => ['chua_tap_trung', 'xao_nhang', 'noi_chuyen'].includes(t));
+            
+            if (level === 'distracted' || level === 'need_help' || hasDistractedTag) {
+                hasDistractedStudents = true;
+            }
+
+            const behaviorSentence = buildBehaviorSentence(row, mode);
+
+            if (mode === 'coding') {
+                const rawBase = getUniqueComment(mode, level, isCheckpoint);
+                const parts = rawBase.split('|');
+
+                let line1 = parts[0] ? parts[0].trim() : "Em hoàn thành tốt nội dung bài học.";
+                let line2 = parts[1] ? parts[1].trim() : "Em có thái độ học tập nghiêm túc và tập trung.";
+                let line3 = behaviorSentence ? behaviorSentence : (parts[2] ? parts[2].trim() : "Mong em tiếp tục giữ vững phong độ học tập.");
+
+                if (!line1.endsWith('.')) line1 += '.';
+                if (!line2.endsWith('.')) line2 += '.';
+                if (!line3.endsWith('.')) line3 += '.';
+
+                const bulletPoints = `•             ${line1}\n•             ${line2}\n•             ${line3}`;
+                studentsText += `${index + 1}. ${name}\n${bulletPoints}\n\n`;
+
+                generatedExcelData.push({
+                    "STT": index + 1,
+                    "Tên Học Viên": name,
+                    "Mức Đánh Giá": level.toUpperCase(),
+                    "Nhận Xét Chi Tiết": `${line1} ${line2} ${line3}`
+                });
+            } else {
+                let comment = getUniqueComment(mode, level, isCheckpoint);
+                if (behaviorSentence) comment += " " + behaviorSentence;
+
+                studentsText += `🔹 ${name}\n${comment}\n\n`;
+
+                generatedExcelData.push({
+                    "STT": index + 1,
+                    "Tên Học Viên": name,
+                    "Mức Đánh Giá": level.toUpperCase(),
+                    "Nhận Xét Chi Tiết": comment
+                });
+            }
+        });
+
+        // XỬ LÝ LỜI ĐÁNH GIÁ CHUNG VÀ LƯU Ý CUỐI BÀI CHUẨN SƯ PHẠM
+        let generalAssessmentText = "";
+        let endingAdviceText = "";
+
+        if (isCheckpoint) {
+            if (mode === 'coding') {
+                if (hasDistractedStudents) {
+                    generalAssessmentText = "Nhìn chung trong buổi kiểm tra hôm nay, đa số các em đều nỗ lực hoàn thành bài làm của mình. Tuy nhiên, lớp vẫn còn một vài thời điểm chưa thật sự giữ được sự tập trung cao độ. Thầy mong các em sẽ rút kinh nghiệm để rèn luyện tính cẩn thận và đạt kết quả tốt hơn trong các kỳ đánh giá tiếp theo.";
+                } else {
+                    generalAssessmentText = "Trong buổi kiểm tra hôm nay, các bạn đều thể hiện thái độ học tập nghiêm túc, tập trung làm bài và tuân thủ tốt quy định lớp học. Nhiều bạn đã vận dụng linh hoạt kiến thức logic đã học để hoàn thành tốt bài kiểm tra. Thầy khen ngợi tinh thần tự giác và sự nỗ lực của cả lớp!";
+                }
+            } else {
+                if (hasDistractedStudents) {
+                    generalAssessmentText = "Trong buổi kiểm tra Checkpoint hôm nay, phần lớn các bạn đều hoàn thành bài tập thực hành. Dù vậy, không khí lớp học đôi lúc còn một chút xao nhãng. Thầy mong cả lớp chú ý rèn luyện thêm tính kiên trì và tập trung hơn nữa nhé!";
+                } else {
+                    generalAssessmentText = "Trong buổi kiểm tra Checkpoint hôm nay, các bạn đều rất tự tin và hào hứng tham gia thử thách. Các bạn đã thể hiện khả năng nhớ câu lệnh, thao tác lắp ráp robot cũng như tinh thần thực hành rất đáng khen ngợi. Thầy rất tự hào về sự cố gắng của tất cả các bạn!";
+                }
+            }
+        } else {
+            if (mode === 'coding') {
+                if (hasDistractedStudents) {
+                    generalAssessmentText = "Trong buổi học hôm nay, nhìn chung các em đã nắm được những kiến thức nền tảng của bài học. Tuy nhiên, không khí học tập ở một số thời điểm vẫn còn chút xao nhãng và chưa duy trì được sự tập trung đồng đều. Thầy mong cả lớp cùng cố gắng chấn chỉnh lại tinh thần để việc tiếp thu bài đạt hiệu quả cao nhất.";
+                    endingAdviceText = "Thầy rất mong quý phụ huynh dành thêm thời gian đồng hành, nhắc nhở các em đôn đốc thói quen tập trung và chủ động ôn luyện lại kiến thức bài học ở nhà để củng cố kỹ năng lập trình được vững chắc hơn.";
+                } else {
+                    generalAssessmentText = "Trong buổi học hôm nay, các bạn đều có thái độ học tập nghiêm túc, chú ý lắng nghe và tích cực tham gia các hoạt động trên lớp. Phần lớn học viên đã nắm được kiến thức cơ bản của bài học và biết cách áp dụng vào các bài tập thực hành. Thầy biểu dương tinh thần tập trung cao độ của cả lớp!";
+                    endingAdviceText = "Bên cạnh đó, thầy rất mong quý phụ huynh dành thêm thời gian nhắc nhở và động viên các bạn ôn lại bài, hoàn thành đầy đủ bài tập sau mỗi buổi học. Sự đồng hành của gia đình sẽ giúp các em hình thành thói quen tự học và củng cố kiến thức hiệu quả hơn.";
+                }
+            } else {
+                if (hasDistractedStudents) {
+                    generalAssessmentText = "Trong buổi học hôm nay, các bạn đều hào hứng tham gia thực hành và hoàn thành sản phẩm. Tuy nhiên, trong giờ học vẫn còn những khoảng thời gian lớp chưa thực sự chú ý lắng nghe dặn dò của thầy. Thầy mong các bạn rèn luyện thêm tính tập trung để thao tác chuẩn xác hơn trong các buổi học tới.";
+                } else {
+                    generalAssessmentText = "Trong buổi học hôm nay, các bạn đều có thái độ học tập rất tốt và chăm chú lắng nghe hướng dẫn của thầy trong suốt quá trình học. Các bạn tích cực tham gia lắp ráp mô hình, chủ động thực hành lập trình và hoàn thành tốt các yêu cầu của bài học. Thầy mong các bạn tiếp tục duy trì tinh thần học tập tích cực này!";
+                }
+            }
+        }
+
+        let checkpointNoticeText = "";
+        if (mode === 'coding') {
+            if (lessonNoVal === 4) {
+                checkpointNoticeText = "\n⚠️ **LƯU Ý ĐẶC BIỆT:** Buổi học tiếp theo (Buổi 5) lớp mình sẽ có bài kiểm tra Đánh giá năng lực **Checkpoint 1**. Thầy mong các em dành thời gian ôn lại toàn bộ kiến thức. Rất mong quý phụ huynh hỗ trợ và nhắc nhở các bạn ôn tập kỹ ở nhà để hoàn thành bài kiểm tra thật tốt nhé!\n";
+            } else if (lessonNoVal === 8) {
+                checkpointNoticeText = "\n⚠️ **LƯU Ý ĐẶC BIỆT:** Buổi học tới (Buổi 9) sẽ là bài kiểm tra **Checkpoint 2**. Các em hãy chủ động ôn tập lại toàn bộ kiến thức. Kính mong quý phụ huynh đôn đốc và hỗ trợ các bạn ôn tập ở nhà để đạt kết quả cao nhất nhé!\n";
+            }
+        } else {
+            if (lessonNoVal === 3) {
+                checkpointNoticeText = "\n⚠️ **LƯU Ý ĐẶC BIỆT:** Buổi học tiếp theo (Buổi 4) các bạn sẽ bước vào bài kiểm tra **Checkpoint 1**. Thầy mong các bạn xem lại toàn bộ các câu lệnh đã học. Kính nhờ quý phụ huynh hỗ trợ nhắc nhở các bạn ôn tập bài ở nhà để tự tin làm bài nhé!\n";
+            } else if (lessonNoVal === 7) {
+                checkpointNoticeText = "\n⚠️ **LƯU Ý ĐẶC BIỆT:** Buổi học tới (Buổi 8) các bạn sẽ làm bài kiểm tra **Checkpoint 2**. Các bạn nhớ dành thời gian xem lại các câu lệnh nhé. Rất mong quý phụ huynh dành chút thời gian hỗ trợ đôn đốc các bạn ôn bài ở nhà để đạt thành tích tốt nhất!\n";
+            }
+        }
+
+        let fullReport = '';
+
+        if (mode === 'coding') {
+            fullReport = `Kính gửi quý phụ huynh,
+Thầy xin gửi tới ba mẹ một số nhận xét về buổi học ngày ${formattedDate} (${lessonNoStr} - ${lessonTime}) của lớp ${className} như sau:
+🌼 Sĩ số: ${attendance}
+🌼 Nội dung buổi học: ${lessonTitle.toUpperCase()}
+${contentLines}
+🌼 Đánh giá chung:
+${generalAssessmentText}
+🌼 Nhận xét từng học viên:
+${studentsText}🌼 Lưu ý:${checkpointNoticeText}
+Thầy mong các bạn dành thời gian ôn lại các nội dung đã học, đồng thời luyện tập thêm các bài tập vận dụng. Việc thực hành thường xuyên sẽ giúp các em hiểu bài sâu hơn và vận dụng kiến thức linh hoạt trong các buổi học tiếp theo.
+${endingAdviceText}`;
+        } else {
+            fullReport = `Xin chào các quý phụ huynh và các bạn học viên,
+📌 Sĩ số: ${attendance}
+Sau ${lessonNoStr} của khóa học ${className} diễn ra vào lúc ${lessonTime}, thầy xin gửi tới quý phụ huynh một số nhận xét về tình hình học tập của các bạn như sau:
+${lessonNoStr}: ${lessonTitle.toUpperCase()}
+${contentLines}
+✅ NHẬN XẾT RIÊNG TỪNG HỌC VIÊN
+${studentsText}✨ NHẬN XẾT CHUNG
+${generalAssessmentText}${checkpointNoticeText}`;
+        }
+
+        document.getElementById('reportOutput').innerText = fullReport;
+        document.getElementById('resultCard').style.display = 'block';
+        document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyReport() {
+        const text = document.getElementById('reportOutput').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Đã sao chép văn bản báo cáo!");
+        });
+    }
+
+    function exportToExcel() {
+        if(generatedExcelData.length === 0) return;
+        const className = document.getElementById('classSelect').value || 'Lop';
+        const worksheet = XLSX.utils.json_to_sheet(generatedExcelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "BaoCaoNhanXet");
+        XLSX.writeFile(workbook, `BaoCao_NhanXet_${className}.xlsx`);
+    }
+
+    /* --- CHỨC NĂNG CỦA MODAL QUẢN LÝ LỚP HỌC VÀ HỌC SINH --- */
+    function openClassModal() {
+        document.getElementById('classModal').style.display = 'flex';
+        renderManageClassSelect();
+        renderManageTable();
+        renderManageStudentList();
+    }
+
+    function closeClassModal() {
+        document.getElementById('classModal').style.display = 'none';
+        updateClassDropdown();
+    }
+
+    function renderManageClassSelect() {
+        const select = document.getElementById('manageClassSelect');
+        select.innerHTML = '';
+        Object.keys(classList).forEach(cKey => {
+            const opt = document.createElement('option');
+            opt.value = cKey;
+            opt.innerText = `Lớp ${cKey} (${classList[cKey].mode === 'coding' ? 'Coding' : 'Robot'})`;
+            select.appendChild(opt);
+        });
+    }
+
+    function renderManageStudentList() {
+        const selectedClassKey = document.getElementById('manageClassSelect').value;
+        const container = document.getElementById('manageStudentContainer');
+        container.innerHTML = '';
+
+        if (!selectedClassKey || !classList[selectedClassKey]) {
+            container.innerHTML = '<i style="color: #64748b; font-size: 13px;">Chưa chọn hoặc không có lớp.</i>';
+            return;
+        }
+
+        const students = classList[selectedClassKey].students;
+        if (students.length === 0) {
+            container.innerHTML = '<i style="color: #64748b; font-size: 13px;">Lớp chưa có học sinh nào.</i>';
+            return;
+        }
+
+        students.forEach((sName, index) => {
+            const chip = document.createElement('div');
+            chip.className = 'student-chip';
+            chip.innerHTML = `${sName} <span onclick="removeStudentFromClass('${selectedClassKey}', ${index})">✕</span>`;
+            container.appendChild(chip);
+        });
+    }
+
+    function renderManageTable() {
+        const tbody = document.getElementById('classListTableBody');
+        tbody.innerHTML = '';
+
+        Object.keys(classList).forEach(cKey => {
+            const cls = classList[cKey];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${cKey}</b></td>
+                <td>${cls.mode === 'coding' ? '💻 Coding' : '🤖 Robot'}</td>
+                <td>${cls.students.length} học sinh</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteClass('${cKey}')">Xóa Lớp</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addNewClass() {
+        const nameInput = document.getElementById('newClassName');
+        const className = nameInput.value.trim().toUpperCase();
+        const classMode = document.getElementById('newClassMode').value;
+
+        if (!className) {
+            alert("Vui lòng nhập tên lớp!");
+            return;
+        }
+
+        if (classList[className]) {
+            alert("Lớp này đã tồn tại trong hệ thống!");
+            return;
+        }
+
+        classList[className] = {
+            mode: classMode,
+            students: []
+        };
+
+        saveClassList();
+        nameInput.value = '';
+        renderManageClassSelect();
+        renderManageTable();
+        document.getElementById('manageClassSelect').value = className;
+        renderManageStudentList();
+        alert(`Đã thêm thành công lớp ${className}!`);
+    }
+
+    function deleteClass(className) {
+        if (confirm(`Bạn có chắc chắn muốn xóa hẳn Lớp ${className} khỏi hệ thống?`)) {
+            delete classList[className];
+            saveClassList();
+            renderManageClassSelect();
+            renderManageTable();
+            renderManageStudentList();
+        }
+    }
+
+    function addStudentToClass() {
+        const selectedClassKey = document.getElementById('manageClassSelect').value;
+        const nameInput = document.getElementById('newStudentName');
+        const studentName = nameInput.value.trim();
+
+        if (!selectedClassKey) {
+            alert("Vui lòng chọn lớp cần thêm!");
+            return;
+        }
+
+        if (!studentName) {
+            alert("Vui lòng nhập tên học sinh!");
+            return;
+        }
+
+        classList[selectedClassKey].students.push(studentName);
+        saveClassList();
+        nameInput.value = '';
+        renderManageStudentList();
+        renderManageTable();
+    }
+
+    function removeStudentFromClass(className, studentIndex) {
+        classList[className].students.splice(studentIndex, 1);
+        saveClassList();
+        renderManageStudentList();
+        renderManageTable();
+    }
+
+    // Khởi tạo hệ thống
+    updateClassDropdown();
+    updateLessonSelectOptions();
+    checkCheckpointWarning();
+    autoFillSyllabus();
+</script>
+
+</body>
+</html>
